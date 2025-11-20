@@ -36,8 +36,13 @@ void writeThingSpeak() {
         valueRange.set("values/[6]/[0]", avgBpBME1);
 
 // Check if Google Sheets is ready before attempting to write
+Serial.println("*** [DIAGNOSTIC] Checking Google Sheets ready status ***");
+esp_task_wdt_reset(); // Reset watchdog before Google Sheets operations
+
 if (GSheet.ready()) {
+    Serial.println("*** [DIAGNOSTIC] Google Sheets is READY - attempting to write ***");
     bool success = GSheet.values.append(&response /* returned response */, spreadsheetId /* spreadsheet Id to append */, "Sheet1!A1" /* range to append */, &valueRange /* data range to append */);
+    esp_task_wdt_reset(); // Reset watchdog after API call
     if (success){
         Serial.println();
         Serial.println("###################################################");
@@ -64,6 +69,7 @@ if (GSheet.ready()) {
     Serial.println(".     Google Sheets NOT READY - Token initializing");
     Serial.println("###################################################");
     Serial.println("Skipping Google Sheets update this cycle");
+    Serial.println("This is normal during startup and will resolve automatically");
     Serial.println();
 }
         Serial.println();
@@ -150,12 +156,18 @@ Serial.println();
 }
 
 void tokenStatusCallback(TokenInfo info){
+    Serial.println("*** [DIAGNOSTIC] Google Sheets Token Status Update ***");
+    esp_task_wdt_reset(); // Reset watchdog during token operations
     if (info.status == token_status_error){
+        Serial.println("!!! TOKEN ERROR DETECTED !!!");
         GSheet.printf("Token info: type = %s, status = %s\n", GSheet.getTokenType(info).c_str(), GSheet.getTokenStatus(info).c_str());
         GSheet.printf("Token error: %s\n", GSheet.getTokenError(info).c_str());
     }
     else{
         GSheet.printf("Token info: type = %s, status = %s\n", GSheet.getTokenType(info).c_str(), GSheet.getTokenStatus(info).c_str());
+        if (info.status == token_status_ready) {
+            Serial.println("*** Google Sheets token is READY ***");
+        }
     }
 }
 //**************************************************************

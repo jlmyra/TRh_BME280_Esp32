@@ -36,6 +36,10 @@
 
 #define WDT_TIMEOUT 30  // Watchdog timeout in seconds
 
+//*********************** BOOT COUNTER **************************
+// RTC memory variable to count boots (persists across software resets)
+RTC_DATA_ATTR int bootCount = 0;
+
 //*********************** WIFI SETTINGS **************************
 
 #include <WiFi.h> //for ESP32 removed //#include <ESP8266WiFi.h>
@@ -277,6 +281,33 @@ Wire1.begin(SDA_2, SCL_2, 100000); // Start 2nd I2C SDA_2 - 33, SCL_2 - 32 - Rea
 
 Serial.begin(115200);  //Fast to stop it holding up the stream
 
+// Increment boot counter and display it
+bootCount++;
+Serial.println();
+Serial.println("###################################################");
+Serial.print("*** [DIAGNOSTIC] BOOT #");
+Serial.print(bootCount);
+Serial.println(" ***");
+Serial.println("###################################################");
+Serial.println();
+
+// Get reset reason
+esp_reset_reason_t reset_reason = esp_reset_reason();
+Serial.print("Reset reason: ");
+switch(reset_reason) {
+  case ESP_RST_POWERON:   Serial.println("Power-on reset"); break;
+  case ESP_RST_SW:        Serial.println("Software reset via esp_restart()"); break;
+  case ESP_RST_PANIC:     Serial.println("Software reset due to exception/panic"); break;
+  case ESP_RST_INT_WDT:   Serial.println("Interrupt watchdog reset"); break;
+  case ESP_RST_TASK_WDT:  Serial.println("Task watchdog reset"); break;
+  case ESP_RST_WDT:       Serial.println("Other watchdog reset"); break;
+  case ESP_RST_DEEPSLEEP: Serial.println("Reset after exiting deep sleep mode"); break;
+  case ESP_RST_BROWNOUT:  Serial.println("Brownout reset (software or hardware)"); break;
+  case ESP_RST_SDIO:      Serial.println("Reset over SDIO"); break;
+  default:                Serial.println("Unknown reset reason"); break;
+}
+Serial.println();
+
 //*******************Watchdog Timer Setup**********************************
 
 // Initialize watchdog timer for system stability
@@ -344,14 +375,29 @@ ThingSpeak.begin(client);  //Thingspeak
 
 //**************************Start Google Sheets***********************
 
+Serial.println("*** [DIAGNOSTIC] Initializing Google Sheets ***");
+
 // Set the callback for Google API access token generation status (for debug only)
 GSheet.setTokenCallback(tokenStatusCallback);
 
 // Set the seconds to refresh the auth token before expire (60 to 3540, default is 300 seconds)
 GSheet.setPrerefreshSeconds(10 * 60);
 
+Serial.println("*** [DIAGNOSTIC] Starting Google Sheets token generation ***");
+Serial.println("Note: Token generation happens asynchronously in the background");
+
+// Reset watchdog before potentially long operation
+esp_task_wdt_reset();
+
 // Begin the access token generation for Google API authentication
+// This is non-blocking and will initialize in the background
 GSheet.begin(CLIENT_EMAIL, PROJECT_ID, PRIVATE_KEY);
+
+Serial.println("*** [DIAGNOSTIC] Google Sheets begin() called ***");
+Serial.println("Token will initialize asynchronously during operation");
+
+// Reset watchdog after operation
+esp_task_wdt_reset();
 
 
 //***************Run Function BME280 RecorderBoot********************    
@@ -379,11 +425,21 @@ GSheet.begin(CLIENT_EMAIL, PROJECT_ID, PRIVATE_KEY);
   // Reset watchdog timer to prevent system restart
   esp_task_wdt_reset();
 
+  // Check WiFi connection status in main loop
+  static unsigned long lastWiFiCheck = 0;
+  if (millis() - lastWiFiCheck > 60000) { // Check every 60 seconds
+    lastWiFiCheck = millis();
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("*** [DIAGNOSTIC] WiFi disconnected in main loop, attempting reconnect ***");
+      checkWiFi();
+    }
+  }
+
   takeReadingBME280(row0, numericalDate, timeF); //Read and Average BME280 measurements
 
   moveLetters(row0);  //LCD Row 0
-  
-  
+
+
   }
 
 //**************************************************************

@@ -1,6 +1,7 @@
 
 void checkWiFi(){
 
+    Serial.println("*** [DIAGNOSTIC] checkWiFi() started ***");
     unsigned long startAttemptTime = millis();
     const unsigned long wifiTimeout = 30000; // 30 seconds timeout
 
@@ -8,6 +9,11 @@ void checkWiFi(){
           (millis() - startAttemptTime) < wifiTimeout){
 
     Serial.print("Attempting to connect to wifi: "); Serial.println(ssid);
+    Serial.print("WiFi status: "); Serial.println(WiFi.status());
+    Serial.print("Elapsed time: "); Serial.print((millis() - startAttemptTime) / 1000); Serial.println(" seconds");
+
+    // Reset watchdog during WiFi connection attempts
+    esp_task_wdt_reset();
 
     WiFi.disconnect();
 
@@ -26,22 +32,33 @@ void checkWiFi(){
 
     delay(3000);
 
+    // Reset watchdog after delays
+    esp_task_wdt_reset();
+
     if (WiFi.status() == WL_CONNECTED){
       lcd.clear();
     }
    }
 
+   Serial.println("*** [DIAGNOSTIC] WiFi connection loop exited ***");
+   Serial.print("Final WiFi status: "); Serial.println(WiFi.status());
+   Serial.print("Total time elapsed: "); Serial.print((millis() - startAttemptTime) / 1000); Serial.println(" seconds");
+
    // Check if connection failed after timeout
    if (WiFi.status() != WL_CONNECTED) {
       Serial.println();
+      Serial.println("###############################################");
+      Serial.println("*** [DIAGNOSTIC] WiFi TIMEOUT - RESTARTING ***");
+      Serial.println("###############################################");
       Serial.println("ERROR: WiFi connection failed after timeout");
-      Serial.println("Restarting ESP32...");
+      Serial.println("Restarting ESP32 in 3 seconds...");
+      Serial.flush(); // Ensure message is sent before restart
       lcd.clear();
       lcd.setCursor(0,0);
       lcd.print("WiFi Timeout!");
       lcd.setCursor(0,1);
       lcd.print("Restarting...");
-      delay(2000);
+      delay(3000); // Increased delay to ensure messages are printed
       ESP.restart();
    }
 
