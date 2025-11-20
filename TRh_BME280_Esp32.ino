@@ -136,9 +136,7 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
   #include <hd44780.h>            // main hd44780 header - see: https://github.com/duinoWitchery/hd44780
   #include <hd44780ioClass/hd44780_I2Cexp.h>  // i2c LCD i/o class header
 
-  const int LCD_COLS = 20;
-  const int LCD_ROWS = 4;
-
+  // LCD_COLS and LCD_ROWS are defined in config.h
   hd44780_I2Cexp lcd;
 
   int screenWidth = 20;   //LCD Display
