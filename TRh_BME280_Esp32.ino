@@ -280,7 +280,12 @@ Serial.begin(230400);  //Fast to stop it holding up the stream
 //*******************Watchdog Timer Setup**********************************
 
 // Initialize watchdog timer for system stability
-esp_task_wdt_init(WDT_TIMEOUT, true); // Enable panic so ESP32 restarts on watchdog timeout
+// ESP32 Arduino Core 3.3.4+ uses a config struct instead of separate parameters
+esp_task_wdt_config_t wdt_config = {
+    .timeout_ms = WDT_TIMEOUT * 1000,  // Convert seconds to milliseconds
+    .trigger_panic = true              // Enable panic so ESP32 restarts on watchdog timeout
+};
+esp_task_wdt_init(&wdt_config);
 esp_task_wdt_add(NULL); // Add current thread to watchdog
 Serial.println(F("Watchdog timer initialized"));
 
