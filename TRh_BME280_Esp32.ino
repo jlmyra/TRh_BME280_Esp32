@@ -87,16 +87,10 @@ unsigned long timerDelay = 30000;
 #include <Time.h>
 #include <Timezone.h>
 
-// Define NTP properties (can be overridden in config.h)
-#ifndef NTP_OFFSET
+// Define NTP properties
 #define NTP_OFFSET   60 * 60      // In seconds
-#endif
-#ifndef NTP_INTERVAL
 #define NTP_INTERVAL 60 * 1000    // In miliseconds
-#endif
-#ifndef NTP_ADDRESS
 #define NTP_ADDRESS  "north-america.pool.ntp.org"  // change this to whatever pool is closest (see ntp.org)
-#endif
 #define TIMEZONE usET // See NTP_Time.h tab for other "Zone references", UK, usMT etc
 
 WiFiUDP ntpUDP;
@@ -142,22 +136,13 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
   #include <hd44780.h>            // main hd44780 header - see: https://github.com/duinoWitchery/hd44780
   #include <hd44780ioClass/hd44780_I2Cexp.h>  // i2c LCD i/o class header
 
-  // Use constants from config.h if not already defined
-  #ifndef LCD_COLS
   const int LCD_COLS = 20;
-  #endif
-  #ifndef LCD_ROWS
   const int LCD_ROWS = 4;
-  #endif
 
   hd44780_I2Cexp lcd;
 
-  #ifndef SCREEN_WIDTH
   int screenWidth = 20;   //LCD Display
-  #endif
-  #ifndef SCREEN_HEIGHT
   int screenHeight = 4;   //LCD Display
-  #endif
 
 //*********************LCD*********************
 
@@ -166,13 +151,8 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
   //This sketch uses 2 I2C Channels. One for the LCD display and one for the BME280's
   //I2C WIRE default pins SCL - 22, SDA - 21
 
-  // SDA_2 and SCL_2 defined in config.h
-  #ifndef SDA_2
   #define SDA_2 33  //Set Pins for I2c WIRE1
-  #endif
-  #ifndef SCL_2
   #define SCL_2 32
-  #endif
 
 //*********************I2C*********************
 
@@ -252,18 +232,10 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
 //occurs after every 5th Thingspeak update. See - takeReadingBME280
 
 unsigned long TR_previousMillis = 0; //Take Reading BME280's Timer
-#ifdef SENSOR_READ_INTERVAL
-unsigned long TR_interval = SENSOR_READ_INTERVAL; //Take Reading BME280's Timer (from config.h)
-#else
-unsigned long TR_interval = 3000; //Take Reading BME280's Timer (default)
-#endif
+unsigned long TR_interval = 3000; //Take Reading BME280's Timer
 
 unsigned long row0_previousMillis = 0; //LCD Row 0 Move Letters
-#ifdef LCD_SCROLL_INTERVAL
-unsigned long row0_interval = LCD_SCROLL_INTERVAL; //LCD Row 0 Move Letters (from config.h)
-#else
-unsigned long row0_interval = 420; //LCD Row 0 Move Letters (default)
-#endif
+unsigned long row0_interval = 420; //LCD Row 0 Move Letters
 unsigned long row0_currentMillis = 0;
 
 
@@ -303,18 +275,9 @@ void tokenStatusCallback(TokenInfo info);
 void setup() {
 
 Wire.begin();  //Start I2C - I2C WIRE default pins SCL - 22, SDA - 21 - Writing to LCD
-
-#ifdef I2C_FREQUENCY
-Wire1.begin(SDA_2, SCL_2, I2C_FREQUENCY); // Start 2nd I2C - Reading BME-280's (config.h)
-#else
 Wire1.begin(SDA_2, SCL_2, 100000); // Start 2nd I2C SDA_2 - 33, SCL_2 - 32 - Reading BME-280's
-#endif
 
-#ifdef SERIAL_BAUD_RATE
-Serial.begin(SERIAL_BAUD_RATE);  // Serial baud rate from config.h
-#else
 Serial.begin(230400);  //Fast to stop it holding up the stream
-#endif
 
 //*******************Watchdog Timer Setup**********************************
 
