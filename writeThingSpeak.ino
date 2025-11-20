@@ -35,26 +35,37 @@ void writeThingSpeak() {
         valueRange.set("values/[5]/[0]", avgHumidBME2);
         valueRange.set("values/[6]/[0]", avgBpBME1);
 
-bool success = GSheet.values.append(&response /* returned response */, spreadsheetId /* spreadsheet Id to append */, "Sheet1!A1" /* range to append */, &valueRange /* data range to append */);
-        if (success){
+// Check if Google Sheets is ready before attempting to write
+if (GSheet.ready()) {
+    bool success = GSheet.values.append(&response /* returned response */, spreadsheetId /* spreadsheet Id to append */, "Sheet1!A1" /* range to append */, &valueRange /* data range to append */);
+    if (success){
+        Serial.println();
+        Serial.println("###################################################");
+        Serial.println(".     Google Sheets update successful");
+        Serial.println("###################################################");
+        Serial.println();
+        response.toString(Serial, true);
+        valueRange.clear();
+        Serial.println();
+    }
+    else{
+        Serial.println();
+        Serial.println("###################################################");
+        Serial.println(".     Google Sheets update UNSUCCESSFUL");
+        Serial.println("###################################################");
+        Serial.println();
+        Serial.println(GSheet.errorReason());
+        Serial.println("Continuing without restart - will retry on next cycle");
+        Serial.println();
+    }
+} else {
     Serial.println();
     Serial.println("###################################################");
-    Serial.println(".     Google Sheets update successful");
+    Serial.println(".     Google Sheets NOT READY - Token initializing");
     Serial.println("###################################################");
+    Serial.println("Skipping Google Sheets update this cycle");
     Serial.println();
-            response.toString(Serial, true);
-            valueRange.clear();
-    Serial.println();
-        }
-        else{
-   Serial.println();
-    Serial.println("###################################################");
-    Serial.println(".     Google Sheets update UNSUCCESSFUL");
-    Serial.println("###################################################");
-    Serial.println();
-            Serial.println(GSheet.errorReason());
-          ESP.restart();
-        }
+}
         Serial.println();
         Serial.println(ESP.getFreeHeap());
     
