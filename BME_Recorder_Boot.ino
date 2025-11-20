@@ -29,8 +29,12 @@ void bme280RecorderBoot() {
 //Check BME 280 Sensors connectivity - if not connected-reboot
 //
   Serial.println();
-  Serial.println(F("Checking Multi Bosch BME280 Barometric Pressure-Humidity-Temp Sensors")); 
+  Serial.println(F("Checking Multi Bosch BME280 Barometric Pressure-Humidity-Temp Sensors"));
 
+  // Reset watchdog before potentially long operation
+  esp_task_wdt_reset();
+
+  Serial.println(F("Attempting to initialize BME1 at 0x76..."));
   if (!bme1.begin(0x76, &Wire1))
   {
    Serial.println(F("Could not find the First BME280 sensor - 0x76, check wiring!"));
@@ -40,17 +44,23 @@ void bme280RecorderBoot() {
    delay(3000);
    ESP.restart();  //infinite loop and crash, restart
   }
-  if (!bme2.begin(0x77, &Wire1)) 
+  Serial.println(F("BME1 initialized successfully"));
+
+  esp_task_wdt_reset();
+
+  Serial.println(F("Attempting to initialize BME2 at 0x77..."));
+  if (!bme2.begin(0x77, &Wire1))
   {
    Serial.println(F("Could not find the Second BME280 sensor- 0x77, check wiring!"));
    lcd.clear();
    lcd.setCursor(0, 0);
    lcd.print(F("BME2 wiring error"));
    delay(3000);
-   ESP.restart();  //infinite loop and crash, restart 
+   ESP.restart();  //infinite loop and crash, restart
   }
+  Serial.println(F("BME2 initialized successfully"));
 
-   Serial.println(F("BME-1 and BME-2 are connected")); 
+   Serial.println(F("BME-1 and BME-2 are connected"));
    Serial.println();
    lcd.clear();
    lcd.setCursor(0, 0);
@@ -64,7 +74,12 @@ void bme280RecorderBoot() {
   lcd.clear();
   lcd.setCursor(0, 0);
 
+   Serial.println(F("Starting WiFi check..."));
+   esp_task_wdt_reset();
    checkWiFi();
+   Serial.println(F("WiFi check completed"));
+
+    esp_task_wdt_reset();
 
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -74,14 +89,18 @@ void bme280RecorderBoot() {
     lcd.setCursor(0,3); lcd.print("RSSI= "); lcd.print(WiFi.RSSI());
 
     delay(3000);
-    
+
     lcd.clear();
 
 //Display the current time from NTP Server
 
-    Serial.println("Check time from the NTP Server");
-    
+    Serial.println(F("==========================================="));
+    Serial.println(F("Check time from the NTP Server"));
+    Serial.println(F("This may take several seconds..."));
+    esp_task_wdt_reset();
+
     getNTC_Time(dateArr, numericalDate, timeF);
+    Serial.println(F("NTP time retrieved successfully"));
     
       // Send time and date to serial monitor
     Serial.print("");
@@ -96,13 +115,18 @@ void bme280RecorderBoot() {
     lcd.print(timeF);
     lcd.setCursor(0, 1);
 
-      lcd.print(dateArrPtr);  
-   
+      lcd.print(dateArrPtr);
+
     delay(3000);
-    
+
     lcd.clear();
 
-     
+    Serial.println(F("==========================================="));
+    Serial.println(F("Boot sequence completed successfully!"));
+    Serial.println(F("Entering main loop..."));
+    Serial.println(F("==========================================="));
+    esp_task_wdt_reset();
+
   }
 
 //**************************************************************
