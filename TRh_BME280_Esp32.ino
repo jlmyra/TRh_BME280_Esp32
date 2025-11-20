@@ -29,7 +29,12 @@
 //*******************************************************************************************
 #include <Arduino.h>
 #include "secrets.h"     //See NOTES Above
+#include "config.h"      // Configuration constants
 
+//*********************** WATCHDOG TIMER **************************
+#include "esp_task_wdt.h"
+
+#define WDT_TIMEOUT 30  // Watchdog timeout in seconds
 
 //*********************** WIFI SETTINGS **************************
 
@@ -70,9 +75,8 @@ const char PRIVATE_KEY[] PROGMEM = SECRET_PRIVATE_KEY PROGMEM;
 //const char spreadsheetId[] = "1Z33oKb0VU3ibr2prLX-wPez9gaddVGn8gYhAURCZLe0";  //from spreadsheet URL
 const char spreadsheetId[] = SECRET_spreadsheetId;
 
-unsigned long lastTime = 0;  
+unsigned long lastTime = 0;
 unsigned long timerDelay = 30000;
-void tokenStatusCallback(TokenInfo info);
 
 //*********************** END Google Sheets SETTINGS ************************
 
@@ -83,10 +87,16 @@ void tokenStatusCallback(TokenInfo info);
 #include <Time.h>
 #include <Timezone.h>
 
-// Define NTP properties
+// Define NTP properties (can be overridden in config.h)
+#ifndef NTP_OFFSET
 #define NTP_OFFSET   60 * 60      // In seconds
+#endif
+#ifndef NTP_INTERVAL
 #define NTP_INTERVAL 60 * 1000    // In miliseconds
+#endif
+#ifndef NTP_ADDRESS
 #define NTP_ADDRESS  "north-america.pool.ntp.org"  // change this to whatever pool is closest (see ntp.org)
+#endif
 #define TIMEZONE usET // See NTP_Time.h tab for other "Zone references", UK, usMT etc
 
 WiFiUDP ntpUDP;
@@ -131,12 +141,23 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
 //*********************LCD*********************
   #include <hd44780.h>            // main hd44780 header - see: https://github.com/duinoWitchery/hd44780
   #include <hd44780ioClass/hd44780_I2Cexp.h>  // i2c LCD i/o class header
+
+  // Use constants from config.h if not already defined
+  #ifndef LCD_COLS
   const int LCD_COLS = 20;
+  #endif
+  #ifndef LCD_ROWS
   const int LCD_ROWS = 4;
+  #endif
+
   hd44780_I2Cexp lcd;
 
+  #ifndef SCREEN_WIDTH
   int screenWidth = 20;   //LCD Display
-  int screenHeight = 4;   //LCD Diaplay
+  #endif
+  #ifndef SCREEN_HEIGHT
+  int screenHeight = 4;   //LCD Display
+  #endif
 
 //*********************LCD*********************
 
@@ -144,9 +165,14 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
 //*********************I2C*********************
   //This sketch uses 2 I2C Channels. One for the LCD display and one for the BME280's
   //I2C WIRE default pins SCL - 22, SDA - 21
-  
+
+  // SDA_2 and SCL_2 defined in config.h
+  #ifndef SDA_2
   #define SDA_2 33  //Set Pins for I2c WIRE1
+  #endif
+  #ifndef SCL_2
   #define SCL_2 32
+  #endif
 
 //*********************I2C*********************
 
@@ -221,29 +247,81 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
 //******************Timers*********************
 
 //Timers are used to move the character arrays on LCD lines 0,
-//to read the BME280's and to get the DarkSky updates. The timing of the 
+//to read the BME280's and to get the DarkSky updates. The timing of the
 //ThingSpeak update happens after every 20th BME280 read. The DarkSky update
 //occurs after every 5th Thingspeak update. See - takeReadingBME280
 
 unsigned long TR_previousMillis = 0; //Take Reading BME280's Timer
-unsigned long TR_interval = 3000; //Take Reading BME280's Timer
+#ifdef SENSOR_READ_INTERVAL
+unsigned long TR_interval = SENSOR_READ_INTERVAL; //Take Reading BME280's Timer (from config.h)
+#else
+unsigned long TR_interval = 3000; //Take Reading BME280's Timer (default)
+#endif
 
 unsigned long row0_previousMillis = 0; //LCD Row 0 Move Letters
-unsigned long row0_interval = 420; //LCD Row 0 Move Letters
+#ifdef LCD_SCROLL_INTERVAL
+unsigned long row0_interval = LCD_SCROLL_INTERVAL; //LCD Row 0 Move Letters (from config.h)
+#else
+unsigned long row0_interval = 420; //LCD Row 0 Move Letters (default)
+#endif
 unsigned long row0_currentMillis = 0;
 
 
 //******************Timers*********************
 
 //**************************************************************
+//**************** Function Prototypes **************************
+//**************************************************************
+
+// Boot and initialization functions
+void bme280RecorderBoot();
+
+// WiFi functions
+void checkWiFi();
+
+// Time functions
+void getNTC_Time(char *dateArrPtr, char *numericalDatePtr, char *timeFPtr);
+
+// Sensor reading functions
+bool validateSensorReading(float temp, float humidity, float pressure, const char* sensorName);
+void takeReadingBME280(char *row0Ptr, char *numericalDatePtr, char *timeFPtr);
+
+// LCD display functions
+void moveLetters(char *row0Ptr);
+void printLCD_Row(uint8_t lcdRow, char *rowBuffer, const char *label,
+                  const char *tempArray, const char *humidArray);
+void printLCD_Row_1();
+void printLCD_Row_2();
+
+// Data upload functions
+void writeThingSpeak();
+void tokenStatusCallback(TokenInfo info);
+
+//**************************************************************
 //**********************VOID SETUP******************************
 //**************************************************************
 void setup() {
-  
-Wire.begin();  //Start I2C - I2C WIRE default pins SCL - 22, SDA - 21 - Writing to LCD
-Wire1.begin(SDA_2, SCL_2, 100000); // Start 2nd I2C SDA_2 - 33, SCL_2 - 32 - Reading BME-280's
 
+Wire.begin();  //Start I2C - I2C WIRE default pins SCL - 22, SDA - 21 - Writing to LCD
+
+#ifdef I2C_FREQUENCY
+Wire1.begin(SDA_2, SCL_2, I2C_FREQUENCY); // Start 2nd I2C - Reading BME-280's (config.h)
+#else
+Wire1.begin(SDA_2, SCL_2, 100000); // Start 2nd I2C SDA_2 - 33, SCL_2 - 32 - Reading BME-280's
+#endif
+
+#ifdef SERIAL_BAUD_RATE
+Serial.begin(SERIAL_BAUD_RATE);  // Serial baud rate from config.h
+#else
 Serial.begin(230400);  //Fast to stop it holding up the stream
+#endif
+
+//*******************Watchdog Timer Setup**********************************
+
+// Initialize watchdog timer for system stability
+esp_task_wdt_init(WDT_TIMEOUT, true); // Enable panic so ESP32 restarts on watchdog timeout
+esp_task_wdt_add(NULL); // Add current thread to watchdog
+Serial.println(F("Watchdog timer initialized"));
 
 //*******************LCD Set-up**********************************
 
@@ -325,9 +403,12 @@ GSheet.begin(CLIENT_EMAIL, PROJECT_ID, PRIVATE_KEY);
 //**************************************************************
 
   void loop() {
-  
+
+  // Reset watchdog timer to prevent system restart
+  esp_task_wdt_reset();
+
   takeReadingBME280(row0, numericalDate, timeF); //Read and Average BME280 measurements
-  
+
   moveLetters(row0);  //LCD Row 0
   
   

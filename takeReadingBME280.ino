@@ -1,7 +1,49 @@
 //**************************************************************
+//****Helper Function to Validate Sensor Readings****
+//**************************************************************
+
+bool validateSensorReading(float temp, float humidity, float pressure, const char* sensorName) {
+  // Check for NaN values
+  if (isnan(temp) || isnan(humidity) || isnan(pressure)) {
+    Serial.print("ERROR: NaN reading from ");
+    Serial.println(sensorName);
+    return false;
+  }
+
+  // Validate temperature range (Fahrenheit): -40°F to 185°F (BME280 spec)
+  if (temp < -40.0 || temp > 185.0) {
+    Serial.print("ERROR: Temperature out of range from ");
+    Serial.print(sensorName);
+    Serial.print(": ");
+    Serial.println(temp);
+    return false;
+  }
+
+  // Validate humidity range: 0% to 100%
+  if (humidity < 0.0 || humidity > 100.0) {
+    Serial.print("ERROR: Humidity out of range from ");
+    Serial.print(sensorName);
+    Serial.print(": ");
+    Serial.println(humidity);
+    return false;
+  }
+
+  // Validate pressure range (inHg): 20 to 35 (reasonable atmospheric range)
+  if (pressure < 20.0 || pressure > 35.0) {
+    Serial.print("ERROR: Pressure out of range from ");
+    Serial.print(sensorName);
+    Serial.print(": ");
+    Serial.println(pressure);
+    return false;
+  }
+
+  return true;
+}
+
+//**************************************************************
 //****Function to Read the BME1&2 Sensors and report to LCD****
 //**************************************************************
-          
+
   void takeReadingBME280(char *row0Ptr, char *numericalDatePtr , char *timeFPtr){
     
   unsigned long TR_currentMillis = millis();
@@ -13,7 +55,7 @@
 
   //*****************Read BME280 #1, Average,  display on LCD row 1********************
 
-  humidityBME1 = (bme1.readHumidity() * rhCorr);  
+  humidityBME1 = (bme1.readHumidity() * rhCorr);
 
   delayMicroseconds(50);
 
@@ -23,9 +65,15 @@
   Serial.print("Average temperature BME2: = "); Serial.println (temperatureBME2);
   Serial.println();
 
-  delayMicroseconds(50); 
+  delayMicroseconds(50);
   baropressBME1 = ((bme1.readPressure()) * 0.000295333727 );
-  delayMicroseconds(50);  
+  delayMicroseconds(50);
+
+  // Validate BME1 readings
+  if (!validateSensorReading(temperatureBME1, humidityBME1, baropressBME1, "BME1")) {
+    Serial.println("WARNING: Invalid reading from BME1, skipping this measurement");
+    return; // Skip this reading cycle
+  }  
 
   dtostrf(temperatureBME1, 3, 1, tempBME1ArrayPtr); //convert floats to arrays
   dtostrf(humidityBME1, 3, 1, humidBME1ArrayPtr);
@@ -53,11 +101,17 @@
   //**************************BME2 - (0x77)********************************************
   //*****************Read BME280 #2, Average,  display on LCD row 1********************
 
-  humidityBME2 = (bme2.readHumidity() * rhCorr) ; 
- 
+  humidityBME2 = (bme2.readHumidity() * rhCorr) ;
+
   delayMicroseconds(50);
   temperatureBME2 = (((bme2.readTemperature() * 1.8) + 32) * tempCorr);
-  delayMicroseconds(50);   
+  delayMicroseconds(50);
+
+  // Validate BME2 readings (pressure not read for BME2, use 30.0 as placeholder)
+  if (!validateSensorReading(temperatureBME2, humidityBME2, 30.0, "BME2")) {
+    Serial.println("WARNING: Invalid reading from BME2, skipping this measurement");
+    return; // Skip this reading cycle
+  }   
 
   dtostrf(temperatureBME2, 3, 1, tempBME2ArrayPtr); //convert floats to arrays
   dtostrf(humidityBME2, 3, 1, humidBME2ArrayPtr);
@@ -126,11 +180,18 @@ new_row0StrLen = strlen(row0Ptr);
   humidityBME1 = bme1.readHumidity() * rhCorr;
   delayMicroseconds(50);
   temperatureBME1 = (((bme1.readTemperature() * 1.8) + 32) * tempCorr);
-  delayMicroseconds(50);  
-  dtostrf(temperatureBME1, 3, 1, tempBME1ArrayPtr); //convert floats to arrays
-  dtostrf(humidityBME1, 3, 1, humidBME1ArrayPtr);
+  delayMicroseconds(50);
   baropressBME1 = ((bme1.readPressure()) * 0.000295333727 );
   delayMicroseconds(50);
+
+  // Validate BME1 real-time readings
+  if (!validateSensorReading(temperatureBME1, humidityBME1, baropressBME1, "BME1")) {
+    Serial.println("WARNING: Invalid real-time reading from BME1, skipping this measurement");
+    return; // Skip this reading cycle
+  }
+
+  dtostrf(temperatureBME1, 3, 1, tempBME1ArrayPtr); //convert floats to arrays
+  dtostrf(humidityBME1, 3, 1, humidBME1ArrayPtr);
 
   printLCD_Row_1();  //Function to LCD print row 1
 
@@ -162,7 +223,14 @@ new_row0StrLen = strlen(row0Ptr);
   humidityBME2 = bme2.readHumidity() * rhCorr;
   delayMicroseconds(50);
   temperatureBME2 = (((bme2.readTemperature() * 1.8) + 32) * tempCorr);
-  delayMicroseconds(50);  
+  delayMicroseconds(50);
+
+  // Validate BME2 real-time readings (pressure not read for BME2, use 30.0 as placeholder)
+  if (!validateSensorReading(temperatureBME2, humidityBME2, 30.0, "BME2")) {
+    Serial.println("WARNING: Invalid real-time reading from BME2, skipping this measurement");
+    return; // Skip this reading cycle
+  }
+
   dtostrf(temperatureBME2, 3, 1, tempBME2ArrayPtr); //convert floats to arrays
   dtostrf(humidityBME2, 3, 1, humidBME2ArrayPtr);
   
@@ -185,78 +253,63 @@ new_row0StrLen = strlen(row0Ptr);
 
 
 //**************************************************************
-//** Function to display ROW 1 on LCD**
+//** Consolidated Function to display sensor data on LCD**
+//**************************************************************
+
+void printLCD_Row(uint8_t lcdRow, char *rowBuffer, const char *label,
+                  const char *tempArray, const char *humidArray) {
+
+    // Build the display string: "Sx-T:XX.XF RH:XX.X%"
+    // Copy sensor label (e.g., "S1-T:")
+    for (unsigned int i = 0, j = 0; i < 5 && j < 5; i++, j++){
+        rowBuffer[i] = label[j];
+    }
+
+    // Copy temperature value
+    for (unsigned int i = 5, j = 0; i < (strlen(tempArray) + 5) && j < strlen(tempArray); i++, j++){
+        rowBuffer[i] = tempArray[j];
+    }
+
+    // Add degree symbol
+    rowBuffer[strlen(tempArray) + 5] = 223;
+
+    // Add "F RH:" label
+    for (unsigned int i = (strlen(tempArray) + 6), j = 0; i < (strlen(tempArray) + 11) && j < 5; i++, j++){
+        rowBuffer[i] = F_RH_Ptr[j];
+    }
+
+    // Copy humidity value
+    for (unsigned int i = (strlen(tempArray) + 11), j = 0;
+         i < ((strlen(tempArray) + 11) + (strlen(humidArray))) && j < strlen(humidArray);
+         i++, j++){
+        rowBuffer[i] = humidArray[j];
+    }
+
+    // Add percent symbol
+    rowBuffer[((strlen(tempArray) + 11) + (strlen(humidArray)))] = perRHPtr[0];
+
+    // Null terminate the string
+    rowBuffer[19] = 0;
+
+    // Display on LCD at specified row
+    lcd.setCursor(0, lcdRow);
+    lcd.print(rowBuffer);
+}
+
+//**************************************************************
+//** Wrapper functions for backward compatibility**
 //**************************************************************
 
 void printLCD_Row_1(){
-
-    for (unsigned int i = 0, j = 0; i < 5 && j < 5; i++, j++){  //Put "T:" into Array 
-    row1Ptr[i] = S1T_colonPtr[j];
-    }
-    for (unsigned int i = 5, j = 0; i < (strlen(tempBME1ArrayPtr) + 5) && j < strlen(tempBME1ArrayPtr); i++, j++){ // Put Temperature into Array
-    row1Ptr[i] = tempBME1ArrayPtr[j]; 
-    }
-    row1Ptr[strlen(tempBME1ArrayPtr) + 5] = {223}; //Put degree symbol into Array
-    for (unsigned int i = (strlen(tempBME1ArrayPtr) + 6), j = 0; i < (strlen(tempBME1ArrayPtr) + 11) && j < 5; i++, j++){ //Put "F RH:" into Array
-    row1Ptr[i] = F_RH_Ptr[j]; 
-    }    
-    for (unsigned int i = (strlen(tempBME1ArrayPtr) + 11), j = 0; i < ((strlen(tempBME1ArrayPtr) + 11) + (strlen(humidBME1ArrayPtr))) && j < strlen(humidBME1ArrayPtr); i++, j++){
-    row1Ptr[i] = humidBME1ArrayPtr[j];  //Put RH in to the Array
-    }
-    row1Ptr[((strlen(tempBME1ArrayPtr) + 11) + (strlen(humidBME1ArrayPtr)))] = perRHPtr[0]; //Put "%" into the array
-    
-    row1Ptr[19] = 0;
-
-  //if(strlen((tempBME1ArrayPtr) + strlen(humidBME1ArrayPtr)) <= 11){ // End the array with null characters to clean the row after 5 or 6 digit TEMP or RH reading
-    //row1Ptr[17] = ' ';
-    //row1Ptr[18] = ' ';
-    //row1Ptr[19] = 0;
-    //}
-  
-  lcd.setCursor(0, 1);   //Display readings on LCD (position 0, row 1 or line 2)
-  lcd.print(row1); //LCD print the Array
+    printLCD_Row(1, row1, S1T_colon, tempBME1Array, humidBME1Array);
 }
-//**************************************************************
-//** END Function to display ROW 1 on LCD**
-//**************************************************************
 
-
-//**************************************************************
-//** Function to display ROW 2 on LCD**
-//**************************************************************
-
-void printLCD_Row_2(){//was row1
-
-    for (unsigned int i = 0, j = 0; i < 5 && j < 5; i++, j++){  //Put "T:" into Array 
-    row2Ptr[i] = S2T_colonPtr[j];
-    }
-    for (unsigned int i = 5, j = 0; i < (strlen(tempBME2ArrayPtr) + 5) && j < strlen(tempBME2ArrayPtr); i++, j++){ // Put Temperature into Array
-    row2Ptr[i] = tempBME2ArrayPtr[j]; 
-    }
-    row2Ptr[strlen(tempBME2ArrayPtr) + 5] = {223}; //Put degree symbol into Array
-    for (unsigned int i = (strlen(tempBME2ArrayPtr) + 6), j = 0; i < (strlen(tempBME2ArrayPtr) + 11) && j < 5; i++, j++){ //Put "F RH:" into Array
-    row2Ptr[i] = F_RH_Ptr[j]; 
-    }    
-    for (unsigned int i = (strlen(tempBME2ArrayPtr) + 11), j = 0; i < ((strlen(tempBME2ArrayPtr) + 11) + (strlen(humidBME2ArrayPtr))) && j < strlen(humidBME2ArrayPtr); i++, j++){
-    row2Ptr[i] = humidBME2ArrayPtr[j];  //Put RH in to the Array
-    }
-    row2Ptr[((strlen(tempBME2ArrayPtr) + 11) + (strlen(humidBME2ArrayPtr)))] = perRHPtr[0]; //Put "%" into the array
-    
-    row2Ptr[19] = 0;
-    
-    /*
-  if(strlen((tempBME2ArrayPtr) + strlen(humidBME2ArrayPtr)) <= 8){ // End the array with null characters to clean the row after 5 or 6 digit TEMP or RH reading
-    row2Ptr[12] = ' ';
-    row2Ptr[13] = ' ';
-    row2Ptr[14] = 0;
-    }
-  */
-  lcd.setCursor(0, 2);   //Display readings on LCD (position 0, row 1 or line 2)
-  lcd.print(row2); //LCD print the Array
-  
+void printLCD_Row_2(){
+    printLCD_Row(2, row2, S2T_colon, tempBME2Array, humidBME2Array);
 }
+
 //**************************************************************
-//** END Function to display ROW 1 on LCD**
+//** END Consolidated LCD display functions**
 //**************************************************************
 
 /*
