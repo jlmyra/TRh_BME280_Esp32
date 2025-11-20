@@ -1,0 +1,46 @@
+# Secrets and sensitive information
+secrets.h
+*.pem
+*.key
+*.crt
+credentials.json
+
+# Arduino/ESP32 build artifacts
+*.elf
+*.bin
+*.hex
+*.map
+build/
+*.o
+*.a
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Compilation databases
+compile_commands.json
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Logs
+*.log
+
+# Platform-specific
+.platformio/
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Documentation build
+docs/_build/
