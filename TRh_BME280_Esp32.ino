@@ -275,7 +275,7 @@ void setup() {
 Wire.begin();  //Start I2C - I2C WIRE default pins SCL - 22, SDA - 21 - Writing to LCD
 Wire1.begin(SDA_2, SCL_2, 100000); // Start 2nd I2C SDA_2 - 33, SCL_2 - 32 - Reading BME-280's
 
-Serial.begin(230400);  //Fast to stop it holding up the stream
+Serial.begin(115200);  //Fast to stop it holding up the stream
 
 //*******************Watchdog Timer Setup**********************************
 
