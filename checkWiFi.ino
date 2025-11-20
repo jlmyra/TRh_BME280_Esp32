@@ -1,12 +1,16 @@
 
 void checkWiFi(){
-    
-    while(WiFi.status() != WL_CONNECTED){
-     
+
+    unsigned long startAttemptTime = millis();
+    const unsigned long wifiTimeout = 30000; // 30 seconds timeout
+
+    while(WiFi.status() != WL_CONNECTED &&
+          (millis() - startAttemptTime) < wifiTimeout){
+
     Serial.print("Attempting to connect to wifi: "); Serial.println(ssid);
-    
+
     WiFi.disconnect();
-    
+
     delay(2000);
 
     lcd.clear();
@@ -14,9 +18,9 @@ void checkWiFi(){
     lcd.print("  Attempting WiFi   ");
     lcd.setCursor(0,1);
     lcd.print("   reconnection     ");
-    
+
     WiFi.begin(ssid, password);  // Connect to WPA/WPA2 network. Change this line if using open or WEP network
-  
+
     WiFi.setAutoReconnect(true);
     WiFi.persistent(true);
 
@@ -25,7 +29,22 @@ void checkWiFi(){
     if (WiFi.status() == WL_CONNECTED){
       lcd.clear();
     }
-   }    
+   }
+
+   // Check if connection failed after timeout
+   if (WiFi.status() != WL_CONNECTED) {
+      Serial.println();
+      Serial.println("ERROR: WiFi connection failed after timeout");
+      Serial.println("Restarting ESP32...");
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("WiFi Timeout!");
+      lcd.setCursor(0,1);
+      lcd.print("Restarting...");
+      delay(2000);
+      ESP.restart();
+   }
+
    Serial.println();
     Serial.print("WiFi CONNECTED - IP:"); Serial.println(WiFi.localIP());
     //Serial.println(" Subnet Mask: "); Serial.print(WiFi.subnetMask());

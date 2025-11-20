@@ -86,7 +86,7 @@ bool success = GSheet.values.append(&response /* returned response */, spreadshe
   else
    {
     int y = 0;
-      while ((x != 200) || (x != -201) || (x != -210))
+      while ((x != 200) && (x != -201) && (x != -210))
       {
         if (y == 5)
         {
