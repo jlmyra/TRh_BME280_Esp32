@@ -417,6 +417,26 @@ ThingSpeak.begin(client);  //Thingspeak
     }
   }
 
+  // Service Google Sheets client to allow background token processing
+  // This is CRITICAL - the library needs periodic calls to process async token operations
+  static unsigned long lastGSheetCheck = 0;
+  static bool wasReady = false;
+  if (millis() - lastGSheetCheck > 5000) { // Check every 5 seconds
+    lastGSheetCheck = millis();
+    bool isReady = GSheet.ready();
+
+    // Log state changes
+    if (isReady && !wasReady) {
+      Serial.println("*** [DIAGNOSTIC] Google Sheets token NOW READY ***");
+      wasReady = true;
+    } else if (!isReady && wasReady) {
+      Serial.println("*** [DIAGNOSTIC] Google Sheets token LOST - reinitializing ***");
+      wasReady = false;
+    } else if (!isReady) {
+      Serial.println("*** [DIAGNOSTIC] Google Sheets token still initializing... ***");
+    }
+  }
+
   takeReadingBME280(row0, numericalDate, timeF); //Read and Average BME280 measurements
 
   moveLetters(row0);  //LCD Row 0
