@@ -52,8 +52,20 @@ if (GSheet.ready()) {
     FirebaseJsonData updatedRangeData;
     bool hasUpdatedRange = response.get(updatedRangeData, "updates/updatedRange");
 
-    // Consider it successful if either the library says so OR we see update indicators
-    bool actualSuccess = success || hasUpdates || hasUpdatedRange;
+    // Get error reason to help determine success
+    String errorReason = GSheet.errorReason();
+
+    // Check response size
+    String responseStr;
+    response.toString(responseStr);
+    bool isEmptyResponse = (responseStr.length() == 0 || responseStr == "{}");
+
+    // Consider it successful if:
+    // 1. The library says success, OR
+    // 2. We see update indicators in response, OR
+    // 3. Response is empty AND error is "unknown error" or empty (indicates HTTP 200 with no body)
+    bool actualSuccess = success || hasUpdates || hasUpdatedRange ||
+                         (isEmptyResponse && (errorReason == "" || errorReason == "unknown error"));
 
     if (actualSuccess){
         Serial.println();
@@ -84,9 +96,7 @@ if (GSheet.ready()) {
 
         Serial.println("*** [DIAGNOSTIC] Full Response Analysis ***");
 
-        // Check if response is populated
-        String responseStr;
-        response.toString(responseStr);
+        // Use responseStr from earlier (already populated)
         Serial.println("Response size (bytes): " + String(responseStr.length()));
 
         if (responseStr.length() == 0 || responseStr == "{}") {
