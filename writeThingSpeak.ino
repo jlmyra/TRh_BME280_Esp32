@@ -107,21 +107,18 @@ if (GSheet.ready()) {
         if (hasError) {
             Serial.println("*** Google API Error Details Found ***");
             if (jsonData.type == "object") {
-                // Parse error object
-                FirebaseJson errorObj;
-                response.get(errorObj, "error");
-
+                // Parse error object - use the jsonData we already retrieved
                 FirebaseJsonData errorCode, errorMessage, errorStatus;
 
-                if (errorObj.get(errorCode, "code")) {
+                if (response.get(errorCode, "error/code")) {
                     Serial.println("HTTP Error Code: " + String(errorCode.intValue));
                 }
 
-                if (errorObj.get(errorMessage, "message")) {
+                if (response.get(errorMessage, "error/message")) {
                     Serial.println("Error Message: " + errorMessage.stringValue);
                 }
 
-                if (errorObj.get(errorStatus, "status")) {
+                if (response.get(errorStatus, "error/status")) {
                     Serial.println("Error Status: " + errorStatus.stringValue);
                 }
             }
