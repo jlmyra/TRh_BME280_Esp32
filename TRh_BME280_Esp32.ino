@@ -379,31 +379,8 @@ timeClient.begin();
 ThingSpeak.begin(client);  //Thingspeak  
 
 //**************************Start Google Sheets***********************
-
-Serial.println("*** [DIAGNOSTIC] Initializing Google Sheets ***");
-
-// Set the callback for Google API access token generation status (for debug only)
-GSheet.setTokenCallback(tokenStatusCallback);
-
-// Set the seconds to refresh the auth token before expire (60 to 3540, default is 300 seconds)
-GSheet.setPrerefreshSeconds(10 * 60);
-
-Serial.println("*** [DIAGNOSTIC] Starting Google Sheets token generation ***");
-Serial.println("Note: Token generation happens asynchronously in the background");
-
-// Reset watchdog before potentially long operation
-esp_task_wdt_reset();
-
-// Begin the access token generation for Google API authentication
-// This is non-blocking and will initialize in the background
-GSheet.begin(CLIENT_EMAIL, PROJECT_ID, PRIVATE_KEY);
-
-Serial.println("*** [DIAGNOSTIC] Google Sheets begin() called ***");
-Serial.println("Token will initialize asynchronously during operation");
-
-// Reset watchdog after operation
-esp_task_wdt_reset();
-
+// NOTE: Google Sheets initialization moved to bme280RecorderBoot()
+// to ensure WiFi is connected before attempting token generation
 
 //***************Run Function BME280 RecorderBoot********************    
  /*
