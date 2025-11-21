@@ -28,12 +28,12 @@ void writeThingSpeak() {
   FirebaseJson valueRange;
 
         valueRange.add("majorDimension", "COLUMNS");
-        valueRange.set("values/[1]/[0]", formattedTime);
-        valueRange.set("values/[2]/[0]", avgTempBME1);
-        valueRange.set("values/[3]/[0]", avgHumidBME1);
-        valueRange.set("values/[4]/[0]", avgTempBME2);
-        valueRange.set("values/[5]/[0]", avgHumidBME2);
-        valueRange.set("values/[6]/[0]", avgBpBME1);
+        valueRange.set("values/[0]/[0]", formattedTime);
+        valueRange.set("values/[1]/[0]", avgTempBME1);
+        valueRange.set("values/[2]/[0]", avgHumidBME1);
+        valueRange.set("values/[3]/[0]", avgTempBME2);
+        valueRange.set("values/[4]/[0]", avgHumidBME2);
+        valueRange.set("values/[5]/[0]", avgBpBME1);
 
 // Check if Google Sheets is ready before attempting to write
 Serial.println("*** [DIAGNOSTIC] Checking Google Sheets ready status ***");
@@ -61,14 +61,19 @@ if (GSheet.ready()) {
         Serial.println();
         Serial.println("Error reason: " + String(GSheet.errorReason()));
         Serial.println("*** [DIAGNOSTIC] Additional error details ***");
+        Serial.println("HTTP Code: " + String(GSheet.errorCode()));
         Serial.println("Response object:");
         response.toString(Serial, true);
         Serial.println();
         Serial.println("Token status at time of error:");
         GSheet.printf("Token type: %s\n", GSheet.getTokenType().c_str());
+        GSheet.printf("Token status: %s\n", GSheet.getTokenStatus().c_str());
         Serial.println("SpreadsheetId: " + String(spreadsheetId));
-        Serial.println("Value range data:");
+        Serial.println("Value range data being sent:");
         valueRange.toString(Serial, true);
+        Serial.println();
+        Serial.println("WiFi Status: " + String(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected"));
+        Serial.println("WiFi RSSI: " + String(WiFi.RSSI()));
         Serial.println("Continuing without restart - will retry on next cycle");
         Serial.println();
     }
