@@ -59,7 +59,16 @@ if (GSheet.ready()) {
         Serial.println(".     Google Sheets update UNSUCCESSFUL");
         Serial.println("###################################################");
         Serial.println();
-        Serial.println(GSheet.errorReason());
+        Serial.println("Error reason: " + String(GSheet.errorReason()));
+        Serial.println("*** [DIAGNOSTIC] Additional error details ***");
+        Serial.println("Response object:");
+        response.toString(Serial, true);
+        Serial.println();
+        Serial.println("Token status at time of error:");
+        GSheet.printf("Token type: %s\n", GSheet.getTokenType().c_str());
+        Serial.println("SpreadsheetId: " + String(spreadsheetId));
+        Serial.println("Value range data:");
+        valueRange.toString(Serial, true);
         Serial.println("Continuing without restart - will retry on next cycle");
         Serial.println();
     }
