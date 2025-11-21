@@ -43,12 +43,27 @@ if (GSheet.ready()) {
     Serial.println("*** [DIAGNOSTIC] Google Sheets is READY - attempting to write ***");
     bool success = GSheet.values.append(&response /* returned response */, spreadsheetId /* spreadsheet Id to append */, "Sheet1!A1" /* range to append */, &valueRange /* data range to append */);
     esp_task_wdt_reset(); // Reset watchdog after API call
-    if (success){
+
+    // Check for actual success indicators in response
+    // The library's success flag may be unreliable, so we also check the response JSON
+    FirebaseJsonData updatesData;
+    bool hasUpdates = response.get(updatesData, "updates");
+
+    FirebaseJsonData updatedRangeData;
+    bool hasUpdatedRange = response.get(updatedRangeData, "updates/updatedRange");
+
+    // Consider it successful if either the library says so OR we see update indicators
+    bool actualSuccess = success || hasUpdates || hasUpdatedRange;
+
+    if (actualSuccess){
         Serial.println();
         Serial.println("###################################################");
         Serial.println(".     Google Sheets update successful");
         Serial.println("###################################################");
         Serial.println();
+        if (hasUpdatedRange) {
+            Serial.println("Updated range: " + updatedRangeData.stringValue);
+        }
         response.toString(Serial, true);
         valueRange.clear();
         Serial.println();
