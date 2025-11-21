@@ -61,7 +61,6 @@ if (GSheet.ready()) {
         Serial.println();
         Serial.println("Error reason: " + String(GSheet.errorReason()));
         Serial.println("*** [DIAGNOSTIC] Additional error details ***");
-        Serial.println("HTTP Code: " + String(GSheet.errorCode()));
         Serial.println("Response object:");
         response.toString(Serial, true);
         Serial.println();
