@@ -311,6 +311,11 @@ Serial.println();
 //*******************Watchdog Timer Setup**********************************
 
 // Initialize watchdog timer for system stability
+// First, deinitialize any existing watchdog timer to avoid "already initialized" error
+esp_task_wdt_deinit();
+Serial.println(F("Deinitialized existing watchdog timer"));
+
+// Now initialize with our settings
 // API differs between ESP32 Arduino Core versions
 #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
     // ESP32 Arduino Core 3.0.0+ uses a config struct
@@ -324,7 +329,7 @@ Serial.println();
     esp_task_wdt_init(WDT_TIMEOUT, true);  // timeout in seconds, panic enabled
 #endif
 esp_task_wdt_add(NULL); // Add current thread to watchdog
-Serial.println(F("Watchdog timer initialized"));
+Serial.println(F("Watchdog timer initialized successfully"));
 
 //*******************LCD Set-up**********************************
 
