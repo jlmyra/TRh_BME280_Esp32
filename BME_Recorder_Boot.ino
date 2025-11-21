@@ -146,7 +146,46 @@ void bme280RecorderBoot() {
     GSheet.begin(CLIENT_EMAIL, PROJECT_ID, PRIVATE_KEY);
 
     Serial.println(F("*** [DIAGNOSTIC] Google Sheets begin() called ***"));
-    Serial.println(F("Token will initialize asynchronously during operation"));
+    Serial.println(F("Waiting for token to be ready (timeout: 60 seconds)..."));
+
+    // Wait for token to be ready with timeout
+    unsigned long tokenStartTime = millis();
+    const unsigned long tokenTimeout = 60000; // 60 second timeout
+    bool tokenReady = false;
+
+    while ((millis() - tokenStartTime) < tokenTimeout && !tokenReady) {
+      esp_task_wdt_reset(); // Keep watchdog happy
+
+      // Service the library to allow token processing
+      tokenReady = GSheet.ready();
+
+      if (!tokenReady) {
+        // Print progress every 2 seconds
+        static unsigned long lastProgress = 0;
+        if (millis() - lastProgress > 2000) {
+          lastProgress = millis();
+          Serial.print(F("*** [DIAGNOSTIC] Token still initializing... Elapsed: "));
+          Serial.print((millis() - tokenStartTime) / 1000);
+          Serial.println(F(" seconds ***"));
+        }
+        delay(100); // Small delay to prevent tight loop
+      } else {
+        Serial.println(F("*** [DIAGNOSTIC] Token initialization SUCCESS! ***"));
+        Serial.print(F("*** Time taken: "));
+        Serial.print((millis() - tokenStartTime) / 1000);
+        Serial.println(F(" seconds ***"));
+      }
+    }
+
+    if (!tokenReady) {
+      Serial.println();
+      Serial.println(F("###################################################"));
+      Serial.println(F("!!! WARNING: Token did not become ready in time !!!"));
+      Serial.println(F("###################################################"));
+      Serial.println(F("Token will continue initializing in background"));
+      Serial.println(F("Google Sheets updates will start once ready"));
+      Serial.println();
+    }
 
     // Reset watchdog after operation
     esp_task_wdt_reset();
