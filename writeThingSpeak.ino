@@ -43,12 +43,27 @@ if (GSheet.ready()) {
     Serial.println("*** [DIAGNOSTIC] Google Sheets is READY - attempting to write ***");
     bool success = GSheet.values.append(&response /* returned response */, spreadsheetId /* spreadsheet Id to append */, "Sheet1!A1" /* range to append */, &valueRange /* data range to append */);
     esp_task_wdt_reset(); // Reset watchdog after API call
-    if (success){
+
+    // Check for actual success indicators in response
+    // The library's success flag may be unreliable, so we also check the response JSON
+    FirebaseJsonData updatesData;
+    bool hasUpdates = response.get(updatesData, "updates");
+
+    FirebaseJsonData updatedRangeData;
+    bool hasUpdatedRange = response.get(updatedRangeData, "updates/updatedRange");
+
+    // Consider it successful if either the library says so OR we see update indicators
+    bool actualSuccess = success || hasUpdates || hasUpdatedRange;
+
+    if (actualSuccess){
         Serial.println();
         Serial.println("###################################################");
         Serial.println(".     Google Sheets update successful");
         Serial.println("###################################################");
         Serial.println();
+        if (hasUpdatedRange) {
+            Serial.println("Updated range: " + updatedRangeData.stringValue);
+        }
         response.toString(Serial, true);
         valueRange.clear();
         Serial.println();
@@ -59,20 +74,88 @@ if (GSheet.ready()) {
         Serial.println(".     Google Sheets update UNSUCCESSFUL");
         Serial.println("###################################################");
         Serial.println();
+
+        // Get error information from GSheet client
         Serial.println("Error reason: " + String(GSheet.errorReason()));
-        Serial.println("*** [DIAGNOSTIC] Additional error details ***");
-        Serial.println("Response object:");
-        response.toString(Serial, true);
+
+        // Try to extract HTTP response code
+        FirebaseJson responsePayload;
+        FirebaseJsonData jsonData;
+
+        Serial.println("*** [DIAGNOSTIC] Full Response Analysis ***");
+
+        // Check if response is populated
+        String responseStr;
+        response.toString(responseStr);
+        Serial.println("Response size (bytes): " + String(responseStr.length()));
+
+        if (responseStr.length() == 0 || responseStr == "{}") {
+            Serial.println("WARNING: Response is EMPTY - no data received from Google API");
+            Serial.println("This usually indicates:");
+            Serial.println("  - Network connectivity issue");
+            Serial.println("  - SSL/TLS certificate problem");
+            Serial.println("  - Timeout before response received");
+            Serial.println("  - DNS resolution failure");
+        } else {
+            Serial.println("Raw response object:");
+            response.toString(Serial, true);
+        }
         Serial.println();
+
+        // Try to parse error details from response
+        bool hasError = response.get(jsonData, "error");
+        if (hasError) {
+            Serial.println("*** Google API Error Details Found ***");
+            if (jsonData.type == "object") {
+                // Parse error object
+                FirebaseJson errorObj;
+                response.get(errorObj, "error");
+
+                FirebaseJsonData errorCode, errorMessage, errorStatus;
+
+                if (errorObj.get(errorCode, "code")) {
+                    Serial.println("HTTP Error Code: " + String(errorCode.intValue));
+                }
+
+                if (errorObj.get(errorMessage, "message")) {
+                    Serial.println("Error Message: " + errorMessage.stringValue);
+                }
+
+                if (errorObj.get(errorStatus, "status")) {
+                    Serial.println("Error Status: " + errorStatus.stringValue);
+                }
+            }
+        } else {
+            Serial.println("No structured error in response - possible causes:");
+            Serial.println("1. Service account doesn't have edit access to spreadsheet");
+            Serial.println("2. Spreadsheet ID is incorrect");
+            Serial.println("3. Network timeout or connection issue");
+            Serial.println("4. Google Sheets API quota exceeded");
+        }
+        Serial.println();
+
         Serial.println("Token status at time of error:");
         GSheet.printf("Token type: %s\n", GSheet.getTokenType().c_str());
         GSheet.printf("Token status: %s\n", GSheet.getTokenStatus().c_str());
+        Serial.println();
+
         Serial.println("SpreadsheetId: " + String(spreadsheetId));
         Serial.println("Value range data being sent:");
         valueRange.toString(Serial, true);
         Serial.println();
+
         Serial.println("WiFi Status: " + String(WiFi.status() == WL_CONNECTED ? "Connected" : "Disconnected"));
         Serial.println("WiFi RSSI: " + String(WiFi.RSSI()));
+        Serial.println();
+
+        Serial.println("*** TROUBLESHOOTING STEPS ***");
+        Serial.println("1. Verify the service account email has EDIT access to the spreadsheet:");
+        Serial.println("   " + String(CLIENT_EMAIL));
+        Serial.println("2. Check spreadsheet exists and ID is correct in secrets.h");
+        Serial.println("3. Verify Google Sheets API is enabled in Google Cloud Console");
+        Serial.println("4. Ensure Sheet1 tab exists in the spreadsheet");
+        Serial.println();
+
         Serial.println("Continuing without restart - will retry on next cycle");
         Serial.println();
     }
