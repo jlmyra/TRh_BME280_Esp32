@@ -136,25 +136,38 @@ NTPClient timeClient(ntpUDP, NTP_ADDRESS, NTP_OFFSET, NTP_INTERVAL);
   float tempCorr = SECRET_tempCorr;
   float rhCorr = SECRET_rhCorr;
 
-//*********************LCD*********************
-  #include <hd44780.h>            // main hd44780 header - see: https://github.com/duinoWitchery/hd44780
-  #include <hd44780ioClass/hd44780_I2Cexp.h>  // i2c LCD i/o class header
+//*********************TFT Display*********************
+  #include <Adafruit_GFX.h>       // Core graphics library
+  #include <MCUFRIEND_kbv.h>      // Hardware-specific library for TFT
 
-  // LCD_COLS and LCD_ROWS are defined in config.h
-  hd44780_I2Cexp lcd;
+  // TFT pin definitions are in config.h
+  MCUFRIEND_kbv tft;
 
-  int screenWidth = 20;   //LCD Display
-  int screenHeight = 4;   //LCD Display
+  int screenWidth = TFT_CHARS_PER_ROW;   // Character width for TFT Display
+  int screenHeight = TFT_TEXT_ROWS;      // Virtual rows for TFT Display
 
-//*********************LCD*********************
+  // TFT Color definitions (16-bit RGB565 format)
+  #define TFT_BLACK   0x0000
+  #define TFT_WHITE   0xFFFF
+  #define TFT_RED     0xF800
+  #define TFT_GREEN   0x07E0
+  #define TFT_BLUE    0x001F
+  #define TFT_CYAN    0x07FF
+  #define TFT_MAGENTA 0xF81F
+  #define TFT_YELLOW  0xFFE0
+  #define TFT_ORANGE  0xFC00
+
+//*********************TFT Display*********************
 
 
 //*********************I2C*********************
-  //This sketch uses 2 I2C Channels. One for the LCD display and one for the BME280's
-  //I2C WIRE default pins SCL - 22, SDA - 21
+  //This sketch uses 1 I2C Channel for the BME280 sensors
+  //TFT display uses parallel interface (not I2C)
+  //I2C default pins: SCL - 22, SDA - 21
 
-  #define SDA_2 33  //Set Pins for I2c WIRE1
-  #define SCL_2 32
+  // No need for second I2C bus - using default Wire for BME280s
+  #define BME_SDA 21  // I2C Data for BME280 sensors
+  #define BME_SCL 22  // I2C Clock for BME280 sensors
 
 //*********************I2C*********************
 
@@ -276,10 +289,9 @@ void tokenStatusCallback(TokenInfo info);
 //**************************************************************
 void setup() {
 
-Wire.begin();  //Start I2C - I2C WIRE default pins SCL - 22, SDA - 21 - Writing to LCD
-Wire1.begin(SDA_2, SCL_2, 100000); // Start 2nd I2C SDA_2 - 33, SCL_2 - 32 - Reading BME-280's
+Wire.begin(BME_SDA, BME_SCL);  //Start I2C on GPIO 21 (SDA) and 22 (SCL) for BME-280 sensors
 
-Serial.begin(115200);  //Fast to stop it holding up the stream
+Serial.begin(SERIAL_BAUD_RATE);  //230400 baud for fast serial communication
 
 // Increment boot counter and display it
 bootCount++;
@@ -331,34 +343,30 @@ Serial.println(F("Deinitialized existing watchdog timer"));
 esp_task_wdt_add(NULL); // Add current thread to watchdog
 Serial.println(F("Watchdog timer initialized successfully"));
 
-//*******************LCD Set-up**********************************
+//*******************TFT Display Set-up**********************************
 
-int status;
-  // see: https://github.com/duinoWitchery/hd44780
-  // initialize LCD with number of columns and rows: 
-  // hd44780 returns a status from begin() that can be used
-  // to determine if initalization failed.
-  // the actual status codes are defined in <hd44780.h>
-  
-  status = lcd.begin(LCD_COLS, LCD_ROWS);
-  
-  if(status) // non zero status means it was unsuccesful
-  {
-    status = -status; // convert negative status value to positive number
+  Serial.println(F("Initializing TFT display..."));
 
-    // begin() failed so blink error code using the onboard LED if possible
-    hd44780::fatalError(status); // does not return
+  // Initialize TFT display
+  uint16_t identifier = tft.readID();
+
+  if (identifier == 0x0000) {
+    Serial.println(F("Warning: Could not read TFT ID, trying default initialization"));
+    identifier = 0x9341; // Try ILI9341 as default
+  } else {
+    Serial.print(F("TFT driver chip detected: 0x"));
+    Serial.println(identifier, HEX);
   }
 
-  // turn on automatic line wrapping
-  // which automatically wraps lines to the next lower line and wraps back
-  // to the top when at the bottom line
-  // NOTE: 
-  // noLineWrap() can be used to disable automatic line wrapping.
-  // _write() can be called instead of write() to send data bytes
-  // to the display bypassing any special character or line wrap processing.
-  lcd.lineWrap();
-//*******************LCD Set-up**********************************
+  tft.begin(identifier);
+  tft.setRotation(1);  // Landscape orientation (0=Portrait, 1=Landscape, 2=Portrait180, 3=Landscape180)
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextSize(TFT_TEXT_SIZE);
+
+  Serial.println(F("TFT display initialized successfully"));
+
+//*******************TFT Display Set-up**********************************
 
 
 //*******************Set up WiFi connection**********************

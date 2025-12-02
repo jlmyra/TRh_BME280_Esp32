@@ -18,9 +18,30 @@
 #define BME1_I2C_ADDRESS 0x76  // CSB to V+, SDO to GND
 #define BME2_I2C_ADDRESS 0x77  // CSB to V+, SDO to V+
 
-// LCD Configuration
-#define LCD_COLS 20
-#define LCD_ROWS 4
+// TFT Display Configuration (Open-Smart 2.8" with MCUFRIEND_kbv library)
+// Pin definitions for ESP32 DEVKIT V1 to Open-Smart 2.8" TFT Shield
+// Using 8-bit parallel interface (avoid boot-sensitive pins)
+#define TFT_D0   13  // LCD Data bit 0
+#define TFT_D1   14  // LCD Data bit 1
+#define TFT_D2   27  // LCD Data bit 2
+#define TFT_D3   26  // LCD Data bit 3
+#define TFT_D4   25  // LCD Data bit 4
+#define TFT_D5   33  // LCD Data bit 5
+#define TFT_D6   32  // LCD Data bit 6
+#define TFT_D7   4   // LCD Data bit 7
+#define TFT_RD   16  // Read strobe
+#define TFT_WR   17  // Write strobe
+#define TFT_RS   18  // Command/Data select (RS/CD)
+#define TFT_CS   23  // Chip select
+#define TFT_RST  19  // Display reset
+
+// TFT Display Dimensions (320x240 for 2.8" display)
+#define TFT_WIDTH  320
+#define TFT_HEIGHT 240
+
+// Virtual "rows" for text display on TFT (simulating 4-row layout)
+#define TFT_TEXT_ROWS 4
+#define TFT_ROW_HEIGHT 60  // Pixels per row (240 / 4 = 60)
 
 //*********************Timing Configuration*********************
 
@@ -81,8 +102,16 @@
 
 //*********************Display Configuration*********************
 
-#define SCREEN_WIDTH 20
-#define SCREEN_HEIGHT 4
+// TFT Display uses pixel coordinates (320x240)
+// For text compatibility, we define character-equivalent dimensions
+#define SCREEN_WIDTH TFT_WIDTH   // 320 pixels
+#define SCREEN_HEIGHT TFT_HEIGHT // 240 pixels
+
+// Text size and positioning for TFT
+#define TFT_TEXT_SIZE 2          // Text size multiplier (1=small, 2=medium, 3=large)
+#define TFT_CHAR_WIDTH 12        // Approximate character width in pixels at size 2
+#define TFT_CHAR_HEIGHT 16       // Approximate character height in pixels at size 2
+#define TFT_CHARS_PER_ROW 26     // Approximate characters that fit per row (320/12)
 
 // Buffer sizes for character arrays
 #define TIME_BUFFER_SIZE 11

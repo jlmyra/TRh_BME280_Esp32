@@ -10,19 +10,22 @@
 void bme280RecorderBoot() {
 
 //Greeting
-  
+
   Serial.println(F("***Hello!!!***"));
   Serial.println();
   Serial.println(F("I'm awake"));
   Serial.println();
-  lcd.init();
-  lcd.backlight();
-  lcd.begin(screenWidth,screenHeight);     //initialize the lcd
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(F("     Hello!     "));
-  lcd.setCursor(0, 1);
-  lcd.print(F("   I'm awake"));
+
+  // TFT greeting screen
+  tft.fillScreen(TFT_BLACK);
+  tft.setCursor(80, 90);  // Centered position (approx)
+  tft.setTextColor(TFT_CYAN);
+  tft.setTextSize(3);
+  tft.print(F("Hello!"));
+  tft.setCursor(60, 130);
+  tft.setTextColor(TFT_WHITE);
+  tft.setTextSize(2);
+  tft.print(F("I'm awake"));
   delay(2000);
 
 //
@@ -35,12 +38,14 @@ void bme280RecorderBoot() {
   esp_task_wdt_reset();
 
   Serial.println(F("Attempting to initialize BME1 at 0x76..."));
-  if (!bme1.begin(0x76, &Wire1))
+  if (!bme1.begin(BME1_I2C_ADDRESS, &Wire))
   {
    Serial.println(F("Could not find the First BME280 sensor - 0x76, check wiring!"));
-   lcd.clear();
-   lcd.setCursor(0, 0);
-   lcd.print(F("BME1 wiring error"));
+   tft.fillScreen(TFT_BLACK);
+   tft.setCursor(10, 110);
+   tft.setTextColor(TFT_RED);
+   tft.setTextSize(2);
+   tft.print(F("BME1 wiring error!"));
    delay(3000);
    ESP.restart();  //infinite loop and crash, restart
   }
@@ -49,12 +54,14 @@ void bme280RecorderBoot() {
   esp_task_wdt_reset();
 
   Serial.println(F("Attempting to initialize BME2 at 0x77..."));
-  if (!bme2.begin(0x77, &Wire1))
+  if (!bme2.begin(BME2_I2C_ADDRESS, &Wire))
   {
    Serial.println(F("Could not find the Second BME280 sensor- 0x77, check wiring!"));
-   lcd.clear();
-   lcd.setCursor(0, 0);
-   lcd.print(F("BME2 wiring error"));
+   tft.fillScreen(TFT_BLACK);
+   tft.setCursor(10, 110);
+   tft.setTextColor(TFT_RED);
+   tft.setTextSize(2);
+   tft.print(F("BME2 wiring error!"));
    delay(3000);
    ESP.restart();  //infinite loop and crash, restart
   }
@@ -62,17 +69,22 @@ void bme280RecorderBoot() {
 
    Serial.println(F("BME-1 and BME-2 are connected"));
    Serial.println();
-   lcd.clear();
-   lcd.setCursor(0, 0);
-   lcd.print(F("BME1 Responding"));
-   lcd.setCursor(0, 1);
-   lcd.print(F("BME2 Responding"));
+   tft.fillScreen(TFT_BLACK);
+   tft.setCursor(10, 90);
+   tft.setTextColor(TFT_GREEN);
+   tft.setTextSize(2);
+   tft.print(F("BME1 Responding"));
+   tft.setCursor(10, 120);
+   tft.print(F("BME2 Responding"));
    delay(2000);
 
   //Connect to WiFi and Report Status
 
-  lcd.clear();
-  lcd.setCursor(0, 0);
+  tft.fillScreen(TFT_BLACK);
+  tft.setCursor(10, 110);
+  tft.setTextColor(TFT_YELLOW);
+  tft.setTextSize(2);
+  tft.print(F("Connecting WiFi..."));
 
    Serial.println(F("Starting WiFi check..."));
    esp_task_wdt_reset();
@@ -81,16 +93,23 @@ void bme280RecorderBoot() {
 
     esp_task_wdt_reset();
 
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("WiFi connected");
-    lcd.setCursor(0,1); lcd.print("IP= "); lcd.print(WiFi.localIP());
-    lcd.setCursor(0,2); lcd.print(WiFi.macAddress());
-    lcd.setCursor(0,3); lcd.print("RSSI= "); lcd.print(WiFi.RSSI());
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(TFT_GREEN);
+    tft.setTextSize(2);
+    tft.setCursor(10, 30);
+    tft.print(F("WiFi connected"));
+    tft.setCursor(10, 60);
+    tft.setTextSize(1);
+    tft.setTextColor(TFT_WHITE);
+    tft.print(F("IP: ")); tft.print(WiFi.localIP());
+    tft.setCursor(10, 80);
+    tft.print(WiFi.macAddress());
+    tft.setCursor(10, 100);
+    tft.print(F("RSSI: ")); tft.print(WiFi.RSSI());
 
     delay(3000);
 
-    lcd.clear();
+    tft.fillScreen(TFT_BLACK);
 
 //Display the current time from NTP Server
 
@@ -101,25 +120,28 @@ void bme280RecorderBoot() {
 
     getNTC_Time(dateArr, numericalDate, timeF);
     Serial.println(F("NTP time retrieved successfully"));
-    
+
       // Send time and date to serial monitor
     Serial.print("");
     Serial.print("Time: "); Serial.println(timeF);
     Serial.print("Date: ");
-    
+
       Serial.print(dateArrPtr);
       Serial.println();
 
-    // Display time and date on the 20x4 LCD
-    lcd.setCursor(0, 0);
-    lcd.print(timeF);
-    lcd.setCursor(0, 1);
-
-      lcd.print(dateArrPtr);
+    // Display time and date on the TFT
+    tft.setTextColor(TFT_CYAN);
+    tft.setTextSize(2);
+    tft.setCursor(10, 90);
+    tft.print(F("Time: "));
+    tft.print(timeF);
+    tft.setCursor(10, 120);
+    tft.print(F("Date: "));
+    tft.print(dateArrPtr);
 
     delay(3000);
 
-    lcd.clear();
+    tft.fillScreen(TFT_BLACK);
 
 //***************Initialize Google Sheets (after WiFi connected)********************
 
