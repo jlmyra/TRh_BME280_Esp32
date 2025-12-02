@@ -1,30 +1,20 @@
 //**************************************************************
-//***********Function to Scroll Row 0 on LCD*******************
+//***********Function to Scroll Row 0 on TFT*******************
 //**************************************************************
-// This function scrolls the letters of a line from right to left. It was inspired by "Single line scroll
-// from Nishant Arora-https://goo.gl/qPGpWB"
-// It first tests to see if the line length has changed. If the length of the printed array has changed
-// the counters have to be reset to accomodate new line length.
-// On each pass through the function a segment of the array is displayed. This segment is created by 
-// assessing the conditions below. The test is ignored until the 2nd DarkSky update (&& GDSCounter > 1).
-// 1. The first 20 characters of the line (see First "if" below) The cursor starts at 20 and moves to  
-//    0 with each pass. It creates a group of characters that increases by one with each pass
-// 2. The next groups of 20 characters (see Fourth "if' below) When the cursor reaches 0 then it 
-//    displays a group of characters that takes one off the beginning and adds one
-//    to the end until it reaches less than 20 characters left
-// 3. The end of the line that is less than 20 characters (see Third 'if' below)
-// 4. The last of the 20 characters and spaces have been displayed reset counters and start over
-//    (see Second 'if' below)
+// This function scrolls the date/time text from right to left on the TFT display.
+// Adapted from the original LCD scrolling function.
+// For TFT, we use pixel coordinates instead of character positions.
+// The text scrolls at the top of the screen (row 0, y position 0-60)
 
 
 void moveLetters(char *row0Ptr){
 
   row0_currentMillis = millis();
   if (row0_currentMillis - row0_previousMillis > row0_interval) {
-      row0_previousMillis = row0_currentMillis; 
-      
-  //Test to see if Line length has changed    
-   
+      row0_previousMillis = row0_currentMillis;
+
+  //Test to see if Line length has changed
+
     if(old_row0StrLen != new_row0StrLen)
     {
 
@@ -32,70 +22,79 @@ void moveLetters(char *row0Ptr){
     scrollCursor = screenWidth;
 
    Serial.println();
-   Serial.println(F("                ##########################################################"));   
+   Serial.println(F("                ##########################################################"));
    Serial.println(F("                @@@@@@@@@@@@ mlr0 Resetting start, stop & width @@@@@@@@@@"));
    Serial.println(F("                ##########################################################"));
    Serial.println();
    Serial.println(F("Function row0 after strlen"));
-   
+
    old_row0StrLen = strlen(row0Ptr);
     }
-    
-//Begin lcd.print Routine
 
-    lcd.setCursor(scrollCursor, 0);//scrollCursor starts at 20 stringStart, stringStart start at 0
-          
-//***-FIRST-'if' to lcd.print the first 20 characters 
-       
+//Begin TFT print Routine
+
+    // Clear the top row area (0-30 pixels high)
+    tft.fillRect(0, 0, TFT_WIDTH, 30, TFT_BLACK);
+
+    // Calculate pixel position for scrolling
+    // scrollCursor is in character positions, convert to pixels
+    int xPos = scrollCursor * TFT_CHAR_WIDTH;
+
+    tft.setCursor(xPos, 10); // Y position = 10 pixels from top
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.setTextSize(2);
+
+//***-FIRST-'if' to print the first characters appearing from right
+
       if(stringStart == 0 && scrollCursor > 0) //***-FIRST-'if'
-      {              
+      {
       for (int i = 0; i < stringStop; i++)
         {
-      lcd.print (row0Ptr[i]); //***PRINT TO LCD***
-        }     
+      tft.print (row0Ptr[i]); //***PRINT TO TFT***
+        }
       scrollCursor--;
-      stringStop++;          
-      } 
+      stringStop++;
+      }
 
- //***-SECOND-'if' to lcd.print End of line reached--reset everything
- 
+ //***-SECOND-'if' End of line reached--reset everything
+
       else
-       
+
       if (stringStart == stringStop) //***-SECOND-'if'
       {
       stringStart = stringStop = 0;
-      scrollCursor = screenWidth;     
-      } 
+      scrollCursor = screenWidth;
+      }
 
-//*--THIRD-- if: Print the last 20 characters of the line
+//*--THIRD-- if: Print the last characters of the line
 
   else
-  
-  if (stringStop == strlen(row0Ptr) && scrollCursor == 0) //*--THIRD-- if: Print the last 20 characters of the line
-  {     
+
+  if (stringStop == strlen(row0Ptr) && scrollCursor == 0) //*--THIRD-- if
+  {
         for (int i = stringStart; i< stringStop; i++)
         {
-        lcd.print(row0Ptr[i]);//***PRINT TO LCD***
+        tft.print(row0Ptr[i]);//***PRINT TO TFT***
         }
-        
+
       stringStart++;
-  }  
-//---Fourth if line0: lcd.print next 20 character chunks shifting the line by one character  
-      else 
-      {      
+  }
+//---Fourth if: print next character chunks shifting the line by one character
+      else
+      {
         for (int i = stringStart; i< stringStop; i++)
-        {      
-      lcd.print(row0Ptr[i]);//***PRINT TO LCD***
+        {
+      tft.print(row0Ptr[i]);//***PRINT TO TFT***
         }
-      
+
       stringStart++;
-      stringStop++;      
+      stringStop++;
      }
   }
 }
 
 //**************************************************************
-//***********Function to Scroll Row 0 on LCD*******************
+//***********Function to Scroll Row 0 on TFT*******************
 //**************************************************************
 
 /*

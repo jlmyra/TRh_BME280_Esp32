@@ -79,16 +79,17 @@ bool validateSensorReading(float temp, float humidity, float pressure, const cha
   dtostrf(humidityBME1, 3, 1, humidBME1ArrayPtr);
   dtostrf(baropressBME1, 3, 1, baroPressBME1ArrayPtr);
 
-  printLCD_Row_1(); // Function to print row 1
+  printTFT_Row_1(); // Function to print row 1 on TFT
   Serial.println();
-   Serial.print("row1Ptr length (average) = "); Serial.println(strlen (row1Ptr)); 
+   Serial.print("row1Ptr length (average) = "); Serial.println(strlen (row1Ptr));
 
-  lcd.setCursor(0, 3);   //
-  lcd.print("BP= "); //LCD print the Array
-  lcd.setCursor(4, 3);
-  lcd.print(baropressBME1);
-  lcd.setCursor(9, 3);
-  lcd.print("in Hg.   ");
+  // Display barometric pressure on row 3 (y = 180)
+  tft.setCursor(10, 180);
+  tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+  tft.setTextSize(2);
+  tft.print("BP= ");
+  tft.print(baropressBME1);
+  tft.print(" inHg   ");
 
      humidValuesBME1=humidValuesBME1 + humidityBME1;  // Sum accumulation for average calculation
      tempValuesBME1=tempValuesBME1 + temperatureBME1; // Sum accumulation for average calculation
@@ -115,8 +116,8 @@ bool validateSensorReading(float temp, float humidity, float pressure, const cha
 
   dtostrf(temperatureBME2, 3, 1, tempBME2ArrayPtr); //convert floats to arrays
   dtostrf(humidityBME2, 3, 1, humidBME2ArrayPtr);
-      
-  printLCD_Row_2(); // Function to print row 2
+
+  printTFT_Row_2(); // Function to print row 2 on TFT
   Serial.print("row2Ptr length (average) = "); Serial.println(strlen (row2Ptr));
   Serial.println();
 
@@ -193,18 +194,19 @@ new_row0StrLen = strlen(row0Ptr);
   dtostrf(temperatureBME1, 3, 1, tempBME1ArrayPtr); //convert floats to arrays
   dtostrf(humidityBME1, 3, 1, humidBME1ArrayPtr);
 
-  printLCD_Row_1();  //Function to LCD print row 1
+  printTFT_Row_1();  //Function to TFT print row 1
 
   Serial.print("Average Counter= ");Serial.print (avgCounterBME); Serial.print("  row1Ptr length (real time) = "); Serial.println(strlen (row1Ptr));
-  
-  //####################### LCD Print Row 3 ###########################
 
-  lcd.setCursor(0, 3);   //Display readings on LCD 
-  lcd.print("BP= "); //LCD print the Array
-  lcd.setCursor(4, 3);
-  lcd.print(baropressBME1);
-  lcd.setCursor(9, 3);
-  lcd.print("in Hg.   ");
+  //####################### TFT Print Row 3 ###########################
+
+  // Display barometric pressure on row 3 (y = 180)
+  tft.setCursor(10, 180);
+  tft.setTextColor(TFT_YELLOW, TFT_BLACK);
+  tft.setTextSize(2);
+  tft.print("BP= ");
+  tft.print(baropressBME1);
+  tft.print(" inHg   ");
   
   
      humidValuesBME1 = humidValuesBME1 + humidityBME1;  // Sum accumulation for average calculation
@@ -233,9 +235,9 @@ new_row0StrLen = strlen(row0Ptr);
 
   dtostrf(temperatureBME2, 3, 1, tempBME2ArrayPtr); //convert floats to arrays
   dtostrf(humidityBME2, 3, 1, humidBME2ArrayPtr);
-  
-  
-  printLCD_Row_2();
+
+
+  printTFT_Row_2();
   Serial.print("Average Counter= "); Serial.print (avgCounterBME);Serial.print("  row2Ptr length (real time) = "); Serial.println(strlen (row2Ptr));
   
      humidValuesBME2 = humidValuesBME2 + humidityBME2;  // Sum accumulation for average calculation
@@ -253,11 +255,11 @@ new_row0StrLen = strlen(row0Ptr);
 
 
 //**************************************************************
-//** Consolidated Function to display sensor data on LCD**
+//** Consolidated Function to display sensor data on TFT**
 //**************************************************************
 
-void printLCD_Row(uint8_t lcdRow, char *rowBuffer, const char *label,
-                  const char *tempArray, const char *humidArray) {
+void printTFT_Row(uint8_t tftRow, char *rowBuffer, const char *label,
+                  const char *tempArray, const char *humidArray, uint16_t color) {
 
     // Build the display string: "Sx-T:XX.XF RH:XX.X%"
     // Copy sensor label (e.g., "S1-T:")
@@ -270,11 +272,12 @@ void printLCD_Row(uint8_t lcdRow, char *rowBuffer, const char *label,
         rowBuffer[i] = tempArray[j];
     }
 
-    // Add degree symbol
-    rowBuffer[strlen(tempArray) + 5] = 223;
+    // Add degree symbol (use 'F' for simplicity on TFT)
+    rowBuffer[strlen(tempArray) + 5] = 'F';
 
-    // Add "F RH:" label
-    for (unsigned int i = (strlen(tempArray) + 6), j = 0; i < (strlen(tempArray) + 11) && j < 5; i++, j++){
+    // Add " RH:" label (simplified spacing)
+    rowBuffer[strlen(tempArray) + 6] = ' ';
+    for (unsigned int i = (strlen(tempArray) + 7), j = 3; i < (strlen(tempArray) + 11) && j < 5; i++, j++){
         rowBuffer[i] = F_RH_Ptr[j];
     }
 
@@ -289,27 +292,34 @@ void printLCD_Row(uint8_t lcdRow, char *rowBuffer, const char *label,
     rowBuffer[((strlen(tempArray) + 11) + (strlen(humidArray)))] = perRHPtr[0];
 
     // Null terminate the string
-    rowBuffer[19] = 0;
+    rowBuffer[((strlen(tempArray) + 11) + (strlen(humidArray))) + 1] = 0;
 
-    // Display on LCD at specified row
-    lcd.setCursor(0, lcdRow);
-    lcd.print(rowBuffer);
+    // Calculate Y position based on row number
+    // Row 1 = y:60, Row 2 = y:120, Row 3 = y:180
+    uint16_t yPos = tftRow * 60;
+
+    // Display on TFT at calculated position
+    tft.setCursor(10, yPos);
+    tft.setTextColor(color, TFT_BLACK);
+    tft.setTextSize(2);
+    tft.print(rowBuffer);
+    tft.print("    "); // Clear any extra characters
 }
 
 //**************************************************************
 //** Wrapper functions for backward compatibility**
 //**************************************************************
 
-void printLCD_Row_1(){
-    printLCD_Row(1, row1, S1T_colon, tempBME1Array, humidBME1Array);
+void printTFT_Row_1(){
+    printTFT_Row(1, row1, S1T_colon, tempBME1Array, humidBME1Array, TFT_CYAN);
 }
 
-void printLCD_Row_2(){
-    printLCD_Row(2, row2, S2T_colon, tempBME2Array, humidBME2Array);
+void printTFT_Row_2(){
+    printTFT_Row(2, row2, S2T_colon, tempBME2Array, humidBME2Array, TFT_GREEN);
 }
 
 //**************************************************************
-//** END Consolidated LCD display functions**
+//** END Consolidated TFT display functions**
 //**************************************************************
 
 /*

@@ -15,28 +15,51 @@ Environmental monitoring system using ESP32 with dual BME280 sensors, 20x4 LCD d
 ## Hardware Requirements
 
 ### Components
-- ESP32 development board (e.g., ESP32-DevKitC, NodeMCU-32S, LOLIN D32)
-- 2x Bosch BME280 sensors (temperature, humidity, barometric pressure)
-- 20x4 I2C LCD display (HD44780 compatible)
-- Jumper wires
+- **DOIT ESP32 DEVKIT V1** development board (30-pin version)
+- **Open-Smart 2.8" TFT LCD Shield** (320x240, 8-bit parallel interface)
+- 2x **Bosch BME280 sensors** (temperature, humidity, barometric pressure)
+- Jumper wires (for connecting TFT shield and BME280 sensors)
 - Power supply (5V via USB or appropriate voltage regulator)
+
+> **Note**: The Open-Smart TFT shield is designed for Arduino UNO and does not physically fit the ESP32 DEVKIT V1. You must use jumper wires to connect the shield to the ESP32.
 
 ### Wiring Connections
 
-#### I2C Bus 1 (Default Pins - LCD Display)
+#### TFT Display (8-bit Parallel Interface)
+The Open-Smart 2.8" TFT shield connects to the ESP32 DEVKIT V1 via jumper wires:
+
 ```
-ESP32 Pin   →   LCD Module
-GPIO 21     →   SDA
-GPIO 22     →   SCL
-5V          →   VCC
-GND         →   GND
+Function      Shield Pin    →   ESP32 GPIO   Notes
+----------------------------------------------------------
+Data Pins (8-bit parallel interface)
+D0            Pin 8 (UNO)   →   GPIO 13      Data bit 0
+D1            Pin 9 (UNO)   →   GPIO 14      Data bit 1
+D2            Pin 10 (UNO)  →   GPIO 27      Data bit 2
+D3            Pin 11 (UNO)  →   GPIO 26      Data bit 3
+D4            Pin 4 (UNO)   →   GPIO 25      Data bit 4
+D5            Pin 13 (UNO)  →   GPIO 33      Data bit 5
+D6            Pin 6 (UNO)   →   GPIO 32      Data bit 6
+D7            Pin 7 (UNO)   →   GPIO 4       Data bit 7
+
+Control Pins
+RD (Read)     A0 (UNO)      →   GPIO 16      Read strobe
+WR (Write)    A1 (UNO)      →   GPIO 17      Write strobe
+RS/CD         A2 (UNO)      →   GPIO 18      Command/Data select
+CS            A3 (UNO)      →   GPIO 23      Chip select
+RST (Reset)   Pin 2 (UNO)   →   GPIO 19      Display reset
+
+Power
+VCC (5V)      5V (UNO)      →   VIN or 5V    Shield power
+GND           GND (UNO)     →   GND          Ground
 ```
 
-#### I2C Bus 2 (Custom Pins - BME280 Sensors)
+> **Important**: This pin mapping avoids boot-sensitive ESP32 pins (GPIO 0, 2, 5, 12, 15) and leaves GPIO 21/22 free for I2C.
+
+#### I2C Bus (BME280 Sensors)
 ```
 ESP32 Pin   →   BME280 Sensors
-GPIO 33     →   SDA (both sensors)
-GPIO 32     →   SCL (both sensors)
+GPIO 21     →   SDA (both sensors)
+GPIO 22     →   SCL (both sensors)
 3.3V        →   VCC (both sensors)
 GND         →   GND (both sensors)
 ```
@@ -69,11 +92,12 @@ GND         →   GND (both sensors)
 
    - **Adafruit BME280 Library** by Adafruit
    - **Adafruit Unified Sensor** by Adafruit
+   - **Adafruit GFX Library** by Adafruit
+   - **MCUFRIEND_kbv** by David Prentice
    - **ThingSpeak** by MathWorks
    - **NTPClient** by Fabrice Weinberg
    - **Time** by Michael Margolis
    - **Timezone** by Jack Christensen
-   - **hd44780** by Bill Perry
    - **ESP_Google_Sheet_Client** by Mobizt
 
 4. **Modify DateStrings.cpp** (Required for compilation)
@@ -161,14 +185,20 @@ Modify `config.h` to change default settings:
 
 ## Display Information
 
-The 20x4 LCD shows:
+The 2.8" TFT LCD (320x240 pixels) displays:
 
 ```
-Row 0: [Scrolling] Date and Time
-Row 1: S1-T:XX.X°F RH:XX.X%
-Row 2: S2-T:XX.X°F RH:XX.X%
-Row 3: BP=XX.X in Hg.
+Row 0 (Top):    [Scrolling] Date and Time
+Row 1 (Y=60):   S1-T:XX.XF RH:XX.X%  (Cyan)
+Row 2 (Y=120):  S2-T:XX.XF RH:XX.X%  (Green)
+Row 3 (Y=180):  BP=XX.X inHg         (Yellow)
 ```
+
+The display uses color-coded text for easy reading:
+- **Date/Time**: White (scrolling)
+- **BME1 Sensor**: Cyan
+- **BME2 Sensor**: Green
+- **Barometric Pressure**: Yellow
 
 ## Data Logging Schedule
 
@@ -195,13 +225,15 @@ Row 3: BP=XX.X in Hg.
   - Ensure WiFi network is 2.4GHz (ESP32 doesn't support 5GHz)
   - Increase `WIFI_TIMEOUT_MS` in `config.h`
 
-### LCD Not Displaying
-- **Problem**: Blank LCD screen
+### TFT Display Not Working
+- **Problem**: Blank TFT screen or no display
 - **Solutions**:
-  - Check I2C connections (SDA/SCL)
-  - Adjust LCD contrast potentiometer
-  - Verify LCD I2C address (usually 0x27 or 0x3F)
-  - Check power supply (5V for LCD)
+  - Verify all 13 pin connections (8 data pins + 5 control pins)
+  - Check serial monitor for TFT driver chip detection message
+  - Ensure VCC is connected to 5V (VIN pin)
+  - Check for proper ground connections
+  - Try running the MCUFRIEND_kbv "diagnose_TFT_support" example to identify your display
+  - Verify the TFT shield is getting sufficient power (some displays draw significant current)
 
 ### ThingSpeak Update Failures
 - **Problem**: "Problem updating channel" in serial monitor
@@ -291,8 +323,8 @@ MIT License - See source files for full license text.
 
 ## Credits
 
-- Adafruit for BME280 libraries
-- Bill Perry for hd44780 LCD library
+- Adafruit for BME280 and GFX libraries
+- David Prentice for MCUFRIEND_kbv TFT library
 - MathWorks for ThingSpeak library
 - Mobizt for Google Sheets client
 - ESP32 community for board support
